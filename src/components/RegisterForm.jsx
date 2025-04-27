@@ -1,104 +1,108 @@
-import { ErrorMessage, Field, Form, Formik } from "formik";
-import { register } from "../redux/auth/operations";
-import { useDispatch } from "react-redux";
-import { useId } from "react";
+import React from "react";
+import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
-import styles from "./LoginForm.module.css";
+import { useDispatch } from "react-redux";
+import { registerUser } from "../redux/authSlice";
+import { TextField, Button, Box } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
-export default function RegisterForm() {
+const RegisterForm = () => {
   const dispatch = useDispatch();
-  const nameId = useId();
-  const emailId = useId();
-  const passwordId = useId();
-  const passwordConfirmId = useId();
+  const navigate = useNavigate();
 
-  const registerSchema = Yup.object().shape({
-    name: Yup.string()
-      .min(3, "Name is too short")
-      .max(20, "Name is too long")
-      .required("Required"),
-    email: Yup.string().email().required("Required"),
+  const validationSchema = Yup.object({
+    name: Yup.string().required("Name is required"),
+    email: Yup.string().email("Incorrect email").required("Email is required"),
     password: Yup.string()
-      .min(8, "Password is too short")
-      .max(25, "Password is too long")
-      .required("Required"),
-    confirmPassword: Yup.string().oneOf(
-      [Yup.ref("password"), null],
-      "Passwords must match"
-    ),
+      .min(6, "The password must have at least 6 characters")
+      .required("Password is required")
   });
 
-  const handleRegister = (values, { resetForm }) => {
-    console.log("Form values:", values);
-    const { name, email, password } = values;
-    dispatch(
-      register({
-        name,
-        email,
-        password,
-      })
-    );
-    resetForm();
-  };
   return (
-    <>
-      <Formik
-        onSubmit={handleRegister}
-        validationSchema={registerSchema}
-        initialValues={{
-          name: "",
-          email: "",
-          password: "",
-          confirmPassword: "",
-        }}
-      >
-        <Form className={styles.form}>
-          <label htmlFor="nameId">Login/name</label>
-          <Field
-            type="text"
-            name="name"
-            placeholder="Enter your name"
-            id={nameId}
-          />
-          <ErrorMessage name="name" component="div" className={styles.error} />
-          <label htmlFor="emailID">Email</label>
-          <Field
-            type="email"
-            name="email"
-            placeholder="Enter your email"
-            id={emailId}
-          />
-          <ErrorMessage name="email" component="div" className={styles.error} />
+    <Formik
+      initialValues={{ name: "", email: "", password: "" }}
+      validationSchema={validationSchema}
+      onSubmit={async (values, { setSubmitting, setErrors }) => {
+        try {
+          const resultAction = await dispatch(registerUser(values));
+          if (registerUser.fulfilled.match(resultAction)) {
+            toast.success("Registered successfully!");
+            navigate("/contacts");
+          } else {
+            setErrors({
+              server:
+                resultAction.payload.message ||
+                "Registration failed. Try again."
+            });
+            toast.error("Registration failed. Try again.");
+          }
+        } catch (error) {
+          console.error("Error during registration:", error);
+          toast.error("Error during registration. Try again.");
+        } finally {
+          setSubmitting(false);
+        }
+      }}
+    >
+      {({ errors, handleChange, values }) => (
+        <Form>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <TextField
+              label="Name"
+              name="name"
+              value={values.name}
+              onChange={handleChange}
+              fullWidth
+              variant="outlined"
+            />
+            <ErrorMessage
+              name="name"
+              component="div"
+              style={{ color: "red" }}
+            />
 
-          <label htmlFor="passwordId">Password</label>
-          <Field
-            type="password"
-            name="password"
-            placeholder="password"
-            id={passwordId}
-          />
-          <ErrorMessage
-            name="password"
-            component="div"
-            className={styles.error}
-          />
+            <TextField
+              label="Email"
+              name="email"
+              value={values.email}
+              onChange={handleChange}
+              fullWidth
+              variant="outlined"
+            />
+            <ErrorMessage
+              name="email"
+              component="div"
+              style={{ color: "red" }}
+            />
 
-          <label htmlFor="">Confirm password</label>
-          <Field
-            type="password"
-            name="password"
-            placeholder="Confirm your password"
-            id={passwordConfirmId}
-          />
-          <ErrorMessage
-            name="password"
-            component="div"
-            className={styles.error}
-          />
+            <TextField
+              label="Password"
+              name="password"
+              type="password"
+              value={values.password}
+              onChange={handleChange}
+              fullWidth
+              variant="outlined"
+            />
+            <ErrorMessage
+              name="password"
+              component="div"
+              style={{ color: "red" }}
+            />
 
-          <button type="submit">Register</button>
+            {errors.server && (
+              <div style={{ color: "red" }}>{errors.server}</div>
+            )}
+
+            <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }}>
+              Sign up
+            </Button>
+          </Box>
         </Form>
-      </Formik>
-    </>
+      )}
+    </Formik>
   );
-}
+};
+
+export default RegisterForm;

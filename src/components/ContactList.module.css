@@ -1,6 +1,8 @@
-.phoneList {
+.contactList {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 5px;
+  justify-content: flex-start;
+  padding: 20px;
+  margin: 0 auto;
 }

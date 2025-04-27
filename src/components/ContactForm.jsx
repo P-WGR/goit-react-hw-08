@@ -1,81 +1,87 @@
-import { Formik, Form, Field, ErrorMessage } from "formik";
-import { useId } from "react";
-import styles from "./ContactForm.module.css";
+// src/components/ContactForm.jsx
+import React from "react";
+import { Formik, Form, ErrorMessage } from "formik";
+import { useDispatch } from "react-redux";
 import * as Yup from "yup";
-import { useDispatch, useSelector } from "react-redux";
-import { selectContacts } from "../redux/contacts/selectors";
-import { addContact } from "../redux/contacts/operations";
+import { addContact } from "../redux/contactsSlice";
+import { TextField, Button, Box } from "@mui/material";
+import toast from "react-hot-toast";
 
-const userSchema = Yup.object().shape({
+const validationSchema = Yup.object({
   name: Yup.string()
-    .min(3, "Name is too short")
-    .max(50, "Name is too long")
-    .required("Required"),
+    .min(3, "Minimum 3 characters")
+    .max(50, "Maximum 50 characters")
+    .required("Name is required"),
   number: Yup.string()
-    .matches(/^\d{10}$/, "Number must be exactly 10 digits")
-    .required("Required"),
+    .matches(/^[0-9-]+$/, "Only numbers and dashes are allowed")
+    .required("Number is required")
 });
-
-const formatNumber = (number) => {
-  return `${number.slice(0, 3)}-${number.slice(3, 6)}-${number.slice(6)}`;
-};
 
 const ContactForm = () => {
   const dispatch = useDispatch();
-  const nameFieldId = useId();
-  const numberFieldId = useId();
-  const contacts = useSelector(selectContacts);
-
-  const handleSubmit = (values, actions) => {
-    const formattedNumber = formatNumber(values.number);
-    const contactExists = (contacts || []).some(
-      (contact) =>
-        contact.name === values.name ||
-        contact.number === formattedNumber ||
-        contact.number === values.number
-    );
-
-    if (contactExists) {
-      alert("This contact already exists!");
-      return;
-    }
-
-    dispatch(addContact({ name: values.name, number: formattedNumber }));
-    actions.resetForm();
-  };
 
   return (
     <Formik
       initialValues={{ name: "", number: "" }}
-      onSubmit={handleSubmit}
-      validationSchema={userSchema}
+      validationSchema={validationSchema}
+      onSubmit={(values, { resetForm }) => {
+        dispatch(addContact(values))
+          .unwrap()
+          .then(() => {
+            toast.success("Contact added!");
+            resetForm();
+          })
+          .catch(() => {
+            toast.error("Error when adding a contact.");
+          });
+      }}
     >
-      {() => (
+      {({ handleChange, values }) => (
         <Form>
-          <div className={styles.form}>
-            <div className={styles.personData}>
-              <label htmlFor={nameFieldId}>Name</label>
-              <Field type="text" name="name" id={nameFieldId}></Field>
-              <ErrorMessage
-                name="name"
-                component="div"
-                className={styles.error}
-              />
-              <label htmlFor={numberFieldId}>Number</label>
-              <Field
-                type="text"
-                name="number"
-                id={numberFieldId}
-                maxLength={10}
-              ></Field>
-              <ErrorMessage
-                name="number"
-                component="div"
-                className={styles.error}
-              />
-            </div>
-            <button type="submit">Add contact</button>
-          </div>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+              width: "100%",
+              maxWidth: "400px",
+              minWidth: "300px",
+              minHeight: "250px",
+              margin: "0 auto"
+            }}
+          >
+            <TextField
+              label="Name"
+              name="name"
+              value={values.name}
+              onChange={handleChange}
+              fullWidth
+              variant="outlined"
+            />
+            <ErrorMessage
+              name="name"
+              component="div"
+              style={{ color: "red" }}
+            />
+
+            <TextField
+              label="Number"
+              name="number"
+              value={values.number}
+              onChange={handleChange}
+              fullWidth
+              variant="outlined"
+            />
+            <ErrorMessage
+              name="number"
+              component="div"
+              style={{ color: "red" }}
+            />
+
+            <Button type="submit" variant="contained" fullWidth>
+              Add Contact
+            </Button>
+          </Box>
         </Form>
       )}
     </Formik>
